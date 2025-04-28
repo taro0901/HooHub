@@ -179,6 +179,8 @@ local function updateESP(player)
     end
 end
 
+local Section = Tab:CreateSection("Player")
+
 local function setupPlayer(player)
     player.CharacterAdded:Connect(function(character)
         character:WaitForChild("HumanoidRootPart", 5)
