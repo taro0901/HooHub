@@ -126,21 +126,6 @@ local function createESP(character, player)
         nameLabel.TextSize = 11
         nameLabel.Text = ""
         nameLabel.Parent = billboard
-
-        local healthBarBackground = Instance.new("Frame")
-        healthBarBackground.Name = "HealthBarBackground"
-        healthBarBackground.Size = UDim2.new(1, -8, 0, 5)
-        healthBarBackground.Position = UDim2.new(0, 4, 1, -7)
-        healthBarBackground.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-        healthBarBackground.BorderSizePixel = 0
-        healthBarBackground.Parent = billboard
-
-        local healthBar = Instance.new("Frame")
-        healthBar.Name = "HealthBar"
-        healthBar.Size = UDim2.new(1, 0, 1, 0)
-        healthBar.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
-        healthBar.BorderSizePixel = 0
-        healthBar.Parent = healthBarBackground
     end
 end
 
