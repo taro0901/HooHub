@@ -245,6 +245,15 @@ local function setupPlayer(player)
     end
 end
 
+-- 🎥 RenderStepped เช็กตลอด
+RunService.RenderStepped:Connect(function()
+    if espEnabled then
+        for _, player in ipairs(Players:GetPlayers()) do
+            updateESP(player)
+        end
+    end
+end)
+
 -- ติดตั้งกับทุกคนที่อยู่
 for _, player in ipairs(Players:GetPlayers()) do
     setupPlayer(player)
@@ -265,15 +274,6 @@ local Toggle = Tab:CreateToggle({
         end
     end,
 })
-
--- 🎥 RenderStepped เช็กตลอด
-RunService.RenderStepped:Connect(function()
-    if espEnabled then
-        for _, player in ipairs(Players:GetPlayers()) do
-            updateESP(player)
-        end
-    end
-end)
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
