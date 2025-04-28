@@ -120,72 +120,208 @@ local RunService = game:GetService("RunService")
 local localPlayer = Players.LocalPlayer
 local espEnabled = false
 
--- 📦 ฟังก์ชันสร้าง ESP (Highlight)
-local function createESP(character)
+-- 📦 สร้าง ESP (Highlight + BillboardGui)
+local function createESP(character, player)
+    if not character or not character:FindFirstChild("HumanoidRootPart") then return end
+
     if not character:FindFirstChild("ESP_Highlight") then
         local highlight = Instance.new("Highlight")
         highlight.Name = "ESP_Highlight"
-        highlight.FillColor = Color3.fromRGB(255, 0, 0) -- สีตัว ESP
-        highlight.OutlineColor = Color3.fromRGB(255, 255, 255) -- สีขอบ
+        highlight.FillColor = Color3.fromRGB(255, 0, 0)
+        highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
         highlight.FillTransparency = 0.5
         highlight.OutlineTransparency = 0
         highlight.Adornee = character
         highlight.Parent = character
     end
+
+    if not character:FindFirstChild("ESP_Billboard") then
+        local billboard = Instance.new("BillboardGui")
+        billboard.Name = "ESP_Billboard"
+        billboard.Adornee = character:FindFirstChild("HumanoidRootPart")
+        billboard.Size = UDim2.new(0, 120, 0, 30) -- 📏 Billboard เล็กลง
+        billboard.StudsOffset = Vector3.new(0, 2, 0) -- สูงขึ้นเล็กน้อย
+        billboard.AlwaysOnTop = true
+        billboard.Parent = character
+
+        -- 🔤 ชื่อผู้เล่น
+        local nameLabel = Instance.new("TextLabel")
+        nameLabel.Name = "NameLabel"
+        nameLabel.Size = UDim2.new(1, 0, 0.6, 0) -- เอาสูงนิดเดียวพอ
+        nameLabel.Position = UDim2.new(0, 0, 0, 0)
+        nameLabel.BackgroundTransparency = 1
+        nameLabel.TextColor3 = Color3.new(1, 1, 1)
+        nameLabel.TextStrokeTransparency = 0
+        nameLabel.Font = Enum.Font.SourceSansBold
+        nameLabel.TextSize = 11 -- ✏️ ตัวอักษรเล็กลง
+        nameLabel.Text = ""
+        nameLabel.Parent = billboard
+
+        -- 🩸 แถบเลือดพื้นหลัง
+        local healthBarBackground = Instance.new("Frame")
+        healthBarBackground.Name = "HealthBarBackground"
+        healthBarBackground.Size = UDim2.new(1, -8, 0, 5) -- กว้างเล็กลง สูงแค่ 5px
+        healthBarBackground.Position = UDim2.new(0, 4, 1, -7)
+        healthBarBackground.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+        healthBarBackground.BorderSizePixel = 0
+        healthBarBackground.Parent = billboard
+
+        -- ❤️ ตัวแถบเลือด
+        local healthBar = Instance.new("Frame")
+        healthBar.Name = "HealthBar"
+        healthBar.Size = UDim2.new(1, 0, 1, 0)
+        healthBar.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+        healthBar.BorderSizePixel = 0
+        healthBar.Parent = healthBarBackground
+    end
 end
 
--- 🗑️ ฟังก์ชันลบ ESP
+-- 🗑️ ลบ ESP
 local function removeESP(character)
+    if not character then return end
     local highlight = character:FindFirstChild("ESP_Highlight")
     if highlight then
         highlight:Destroy()
     end
+    local billboard = character:FindFirstChild("ESP_Billboard")
+    if billboard then
+        billboard:Destroy()
+    end
 end
 
--- 🎯 ฟังก์ชันอัปเดต ESP ให้กับผู้เล่นคนเดียว
+-- 🎯 อัปเดต ESP
 local function updateESP(player)
-    if player ~= localPlayer then
-        if player.Character then
-            if espEnabled then
-                createESP(player.Character)
-            else
-                removeESP(player.Character)
+    if player ~= localPlayer and player.Character then
+        local character = player.Character
+        if espEnabled then
+            createESP(character, player)
+
+            local billboard = character:FindFirstChild("ESP_Billboard")
+            local humanoid = character:FindFirstChildOfClass("Humanoid")
+            if billboard and humanoid and billboard:FindFirstChild("NameLabel") then
+                billboard.NameLabel.Text = player.Name .. " (" .. math.floor(humanoid.Health) .. " HP)"
+
+                -- สีตัวอักษร
+                if humanoid.Health <= 25 then
+                    billboard.NameLabel.TextColor3 = Color3.fromRGB(255, 0, 0)
+                elseif humanoid.Health <= 50 then
+                    billboard.NameLabel.TextColor3 = Color3.fromRGB(255, 165, 0)
+                else
+                    billboard.NameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+                end
+
+                -- อัปเดต HealthBar
+                local healthBarBackground = billboard:FindFirstChild("HealthBarBackground")
+                if healthBarBackground and healthBarBackground:FindFirstChild("HealthBar") then
+                    local healthBar = healthBarBackground.HealthBar
+                    healthBar.Size = UDim2.new(math.clamp(humanoid.Health / humanoid.MaxHealth, 0, 1), 0, 1, 0)
+
+                    -- เปลี่ยนสีหลอดเลือด
+                    if humanoid.Health <= 25 then
+                        healthBar.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+                    elseif humanoid.Health <= 50 then
+                        healthBar.BackgroundColor3 = Color3.fromRGB(255, 165, 0)
+                    else
+                        healthBar.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+                    end
+                end
             end
+        else
+            removeESP(character)
         end
     end
 end
 
--- 🛠️ ฟังก์ชันติดตั้ง ESP ให้ผู้เล่นที่มีอยู่แล้ว
-for _, player in ipairs(Players:GetPlayers()) do
+-- ⚙️ ติดตั้ง ESP
+local function setupPlayer(player)
+    player.CharacterAdded:Connect(function(character)
+        character:WaitForChild("HumanoidRootPart", 5)
+        if espEnabled then
+            createESP(character, player)
+        end
+    end)
     if player.Character then
-        updateESP(player)
+        createESP(player.Character, player)
     end
 end
 
--- 🛠️ เมื่่อมีผู้เล่นใหม่เข้ามา
-Players.PlayerAdded:Connect(function(player)
-    player.CharacterAdded:Connect(function(character)
-        character:WaitForChild("HumanoidRootPart") -- รอโหลดตัวละคร
-        updateESP(player)
-    end)
-end)
+-- ติดตั้งกับทุกคนที่อยู่
+for _, player in ipairs(Players:GetPlayers()) do
+    setupPlayer(player)
+end
 
--- 🟢 ใส่ Toggle UI (เหมือน Aimbot Toggle)
+-- เมื่่อมีคนใหม่เข้า
+Players.PlayerAdded:Connect(setupPlayer)
+
+-- 🟢 Toggle ESP
 local Toggle = Tab:CreateToggle({
-    Name = "ESP (มองเห็นศัตรู)",
+    Name = "ESP (เล็กลงทั้งชุด)",
     CurrentValue = false,
     Flag = "ESP_Toggle",
     Callback = function(Value)
         espEnabled = Value
+        for _, player in ipairs(Players:GetPlayers()) do
+            updateESP(player)
+        end
     end,
 })
 
--- ⚡ อัปเดต ESP ทุกเฟรม
+-- 🎥 RenderStepped เช็กตลอด
 RunService.RenderStepped:Connect(function()
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player.Character then
+    if espEnabled then
+        for _, player in ipairs(Players:GetPlayers()) do
             updateESP(player)
         end
     end
 end)
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+
+local LocalPlayer = Players.LocalPlayer
+local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+
+local staminaEnabled = false
+
+-- 📦 ฟังก์ชันล็อก Stamina (ไม่ให้ลด)
+local function lockStamina(character)
+    -- รอ Attribute 'Stamina'
+    while not character:GetAttribute("Stamina") do
+        task.wait()
+    end
+
+    -- อัปเดตค่า Stamina ให้เต็มตลอด
+    RunService.RenderStepped:Connect(function()
+        if staminaEnabled and character and character:GetAttribute("Stamina") then
+            character:SetAttribute("Stamina", 100) -- เซ็ตเต็ม 100
+        end
+    end)
+end
+
+-- 🗑️ ฟังก์ชันรีเซ็ต Character ใหม่
+local function setupCharacter(char)
+    Character = char
+    lockStamina(Character)
+end
+
+-- 🎯 ฟังก์ชันเมื่อเกิดตัวใหม่
+LocalPlayer.CharacterAdded:Connect(function(char)
+    setupCharacter(char)
+end)
+
+-- 🛠️ เริ่มต้นทำงานกับตัวที่มีอยู่แล้ว
+setupCharacter(Character)
+
+-- 🟢 ใส่ Toggle UI เปิด/ปิด ระบบ Stamina Infinite
+local Toggle = Tab:CreateToggle({
+    Name = "Infinite Stamina (สแตมิน่าไม่ลด)",
+    CurrentValue = false,
+    Flag = "Stamina_Toggle",
+    Callback = function(Value)
+        staminaEnabled = Value
+    end,
+})
+
+
+
 
